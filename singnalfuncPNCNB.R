@@ -428,7 +428,7 @@ or_CI <- rename(or_CI, c("AOR" = "OR",
 col_order <- c("variable", "AOR", "Lower_bound", "Upper_bound")
 or_CI <- or_CI[, col_order]
 
-## Plot
+## Plot (do not run)
 plot_logit_model <- or_CI[-1,] %>%  #remove row number 1 (The intercept) 
   ggplot(aes(x = reorder(variable, AOR), y = AOR)) +
   geom_point(shape = 1,
@@ -447,6 +447,35 @@ plot_logit_model <- or_CI[-1,] %>%  #remove row number 1 (The intercept)
 plot_logit_model
 
 
+### For assessing interaction
+##### Visualizing Interaction without running Regression
+custom_colors1 <- rev(c(
+  "#16722c", "#66d280", "#8199ba",
+  "#88292f", "#c96480"))
+df_summary <- pkdhs %>%
+  filter(!is.na(v102)) %>%
+  group_by(v190, v102) %>%
+  summarise(proportion = mean(signalfunc))
+df_summary$v190 <- factor(df_summary$v190,
+                          levels = c("poorest", "poorer", "middle", "richer", "richest"),
+                          labels = c("Poorest", "Poorer", "Middle", "Richer", "Richest"))
+EMPlot <- ggplot(df_summary, aes(x = v102 , y = proportion,
+                                 group = v190, color = v190)) +
+  geom_line(size = 2, alpha = 0.5) +  # Line plot to show interaction
+  geom_point(size = 8) +  # Adding points for each value
+  labs(title = "Visualizing Interaction between Place of\n        Residence and Wealth Index",
+       x = NULL,
+       y = "Proportion of At least 2 Signal Functions",
+       color = "Wealth Index") +
+  scale_color_manual(values = custom_colors1,   # Custom color palette for legend
+                     labels = c("Poorest", "Poorer", "Middle", "Richer", "Richest")) +  # Custom legend labels
+  scale_x_discrete(labels = c("Urban", "Rural")) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = rel(1.6)),
+        axis.title.y = element_text(size = rel(1.5)),
+        axis.text.x = element_text(hjust = 0.5, size = rel(1.5)),
+        axis.text.y = element_text(hjust = 0.5, size = rel(1.5)))  # Rotate x-axis labels for readability
+ggsave("InteractionPlot1.png", EMPlot, dpi = 600 )
 
 
 ## Not included in the current analysis
