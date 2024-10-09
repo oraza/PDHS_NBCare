@@ -427,24 +427,82 @@ or_CI <- rename(or_CI, c("AOR" = "OR",
 
 col_order <- c("variable", "AOR", "Lower_bound", "Upper_bound")
 or_CI <- or_CI[, col_order]
+or_CI$variable <- recode_factor(or_CI$variable,
+                                "m_age_cat1" = "Mother's Age 20-34",
+                                "m_age_cat2" = "Mother's Age 35-49",
+                                "bord_cat2" = "Birth Order 2-3",
+                                "bord_cat3" = "Birth Order 4-5",
+                                "bord_cat4" = "Birth Order 6+",
+                                "v106primary" = "Mother's Education: Primary",
+                                "v106secondary" = "Mother's Education: Secondary",
+                                "v106higher" = "Mother's Education: Higher",
+                                "b4female" = "Sex of Child: Female",
+                                "v102rural" = "Place of Residence: Rural",
+                                "v101sindh" = "Sindh",
+                                "v101kpk" = "KPK",
+                                "v101balochistan" = "Balochistan",
+                                "v101ict" = "ICT",
+                                "v101fata" = "FATA",
+                                "sba" = "SBA",
+                                "v190poorer" = "WI: Poorer",
+                                "v190middle" = "WI: Middle",
+                                "v190richer" = "WI: Richer",
+                                "v190richest" = "WI: Richest",
+                                "b_HF" = "Institutional Delivery",
+                                "anc1" = "ANC visit: 1-3",
+                                "anc2" = "ANC visit: 4+",
+                                "m17yes" = "CS Performed")
 
-## Plot (do not run)
-plot_logit_model <- or_CI[-1,] %>%  #remove row number 1 (The intercept) 
-  ggplot(aes(x = reorder(variable, AOR), y = AOR)) +
-  geom_point(shape = 1,
-             size  = 4,
-             position = "dodge", color="black") + 
-  geom_errorbar(aes(ymin  = Lower_bound,
-                    ymax  = Upper_bound),
-                size  = 0.7,
-                position = "dodge", color="turquoise4") +
-  theme(axis.title = element_text(face = "bold")) +
-  xlab("Variables") + ylab("Adjusted odds ratios with 95% CI") +
-  coord_flip(ylim = c(0, 3.5)) + 
-  geom_hline(yintercept = 1, color = "red", size = 1) +
-  theme(axis.title = element_text(size = 17)) + 
-  theme(axis.text = element_text(size = 14)) 
+
+## Plotting AORs with 95%CI as a forestplot
+custom_order <- c("Mother's Age 20-34",
+                  "Mother's Age 35-49",
+                  "Birth Order 2-3",
+                  "Birth Order 4-5",
+                  "Birth Order 6+",
+                  "Mother's Education: Primary",
+                  "Mother's Education: Secondary",
+                  "Mother's Education: Higher",
+                  "Sex of Child: Female",
+                  "Place of Residence: Rural",
+                  "Sindh",
+                  "KPK",
+                  "Balochistan",
+                  "ICT",
+                  "FATA",
+                  "SBA",
+                  "WI: Poorer",
+                  "WI: Middle",
+                  "WI: Richer",
+                  "WI: Richest",
+                  "Institutional Delivery",
+                  "ANC visit: 1-3",
+                  "ANC visit: 4+",
+                  "CS Performed")
+custom_colors <- (rev(c(
+  "#FF4500", "#FF4500", "#1E90FF", "#1E90FF", "#1E90FF", "#32CD32", "#32CD32",
+  "#32CD32", "#FF1493", "#768200", "#A52A2A", "#A52A2A", "#A52A2A", "#A52A2A",
+  "#A52A2A", "#5F9EA0", "#FFD700", "#FFD700", "#FFD700", "#FFD700", "#dd9977",
+  "#889900", "#889900", "#8A2BE2")))
+
+plot_logit_model <- or_CI[-1,] %>%
+  mutate(variable = factor(variable, levels = rev(custom_order))) %>%
+  ggplot(aes(x = variable, y = AOR, color = variable)) +
+  geom_point(shape = 16, size = 4, position = position_dodge(width = 1)) +
+  geom_errorbar(aes(ymin = Lower_bound, ymax = Upper_bound),
+                width = 0.2, size = 0.7, position = position_dodge(width = 1)) +
+  scale_color_manual(values = custom_colors) + # Custom colors for each variable
+  xlab(NULL) +
+  ylab("Adjusted Odds Ratios with 95% CI") +
+  geom_hline(yintercept = 1, color = "red", size = 0.6, linetype='dashed') +
+  theme_minimal() +
+  theme(axis.title = element_text(size = 14, face = "bold"),
+        axis.text = element_text(size = 12),
+        legend.position = "none",
+        panel.grid.minor = element_blank()) +
+  coord_flip(ylim = c(0, 3.5))
 plot_logit_model
+ggsave("AORsForestPlot.png", plot_logit_model, dpi = 600 )
 
 
 ### For assessing interaction
