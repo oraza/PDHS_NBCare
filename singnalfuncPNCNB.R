@@ -19,7 +19,7 @@ pkdhs <- pkdhs %>%
       m78a == "yes" ~ 1)) %>% 
   set_value_labels(cord = c("Yes" = 1, "No"=0)) %>%
   set_variable_labels(cord = "Cord examined")
-topline(pkdhs, variable = cord, weight = wt)
+cord_pct <- topline(pkdhs, variable = cord, weight = wt)
 
 # measure temp
 pkdhs <- pkdhs %>%
@@ -30,7 +30,7 @@ pkdhs <- pkdhs %>%
       m78b == "yes" ~ 1)) %>% 
   set_value_labels(temp = c("Yes" = 1, "No"=0)) %>%
   set_variable_labels(temp = "Temperature measured")
-topline(pkdhs, variable = temp, weight = wt)
+temp_pct <- topline(pkdhs, variable = temp, weight = wt)
 
 # Counseling on danger signs
 pkdhs <- pkdhs %>%
@@ -41,7 +41,7 @@ pkdhs <- pkdhs %>%
       m78c == "yes" ~ 1)) %>% 
   set_value_labels(dang = c("Yes" = 1, "No"=0)) %>%
   set_variable_labels(dang = "Counselling on danger signs")
-topline(pkdhs, variable = dang, weight = wt)
+dang_pct <- topline(pkdhs, variable = dang, weight = wt)
 
 # Counseling on breastfeeding
 pkdhs <- pkdhs %>%
@@ -52,7 +52,7 @@ pkdhs <- pkdhs %>%
       m78d == "yes" ~ 1)) %>% 
   set_value_labels(c_bf = c("Yes" = 1, "No"=0)) %>%
   set_variable_labels(c_bf = "Counselling on breastfeeding")
-topline(pkdhs, variable = c_bf, weight = wt)
+cBF_pct <- topline(pkdhs, variable = c_bf, weight = wt)
 
 # Observing breastfeeding
 pkdhs <- pkdhs %>%
@@ -63,7 +63,7 @@ pkdhs <- pkdhs %>%
       m78e == "yes" ~ 1)) %>% 
   set_value_labels(obs_bf = c("Yes" = 1, "No"=0)) %>%
   set_variable_labels(obs_bf = "Observation of breastfeeding")
-topline(pkdhs, variable = obs_bf, weight = wt)
+obsBF_pct <- topline(pkdhs, variable = obs_bf, weight = wt)
 
 # Weighed
 pkdhs <- pkdhs %>%
@@ -74,7 +74,7 @@ pkdhs <- pkdhs %>%
       m19a %in% c("from written card", "from mother's recall") ~ 1)) %>% 
   set_value_labels(weighed = c("Yes" = 1, "No"=0)) %>%
   set_variable_labels(weighed = "Weighed")
-topline(pkdhs, variable = weighed, weight = wt)
+w_pct <- topline(pkdhs, variable = weighed, weight = wt)
 
 # Percentage with at least two signal functions performed during the
 # first 2 days after birth
@@ -88,7 +88,7 @@ pkdhs <- pkdhs %>%
       TRUE ~ 0)) %>%
   set_value_labels(signalfunc = c("At least 2 SFs" = 1, "Less than 2 SFs" = 0)) %>%
   set_variable_labels(signalfunc = "Signal functions for NB-PNC")
-topline(pkdhs, variable = signalfunc, weight = wt)
+sf_pct <- topline(pkdhs, variable = signalfunc, weight = wt)
 
 # Not included in the current analysis
 # Media & Internet use
