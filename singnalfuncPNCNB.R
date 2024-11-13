@@ -4,7 +4,7 @@ library(labelled)
 library(pollster)
 library(survey)
 library(openxlsx)
-pkdhs <- read.dta("//Users//sulailfatima//Desktop//Megasync//DUHS-SPH//MGWR_DHS//PKKR71FL.DTA")
+pkdhs <- read.dta("//Users//sulailfatima//Desktop//GoogleDrive//MGWR_DHS//PKKR71FL.DTA")
 # creating the sampling weight variable. 
 pkdhs$wt <- pkdhs$v005/1000000 
 
@@ -75,6 +75,53 @@ pkdhs <- pkdhs %>%
   set_value_labels(weighed = c("Yes" = 1, "No"=0)) %>%
   set_variable_labels(weighed = "Weighed")
 w_pct <- topline(pkdhs, variable = weighed, weight = wt)
+
+sep_signalfun <- c("cord_pct", "temp_pct", "dang_pct", "cBF_pct",
+                   "obsBF_pct", "w_pct")
+freq <- c(cord_pct$Frequency[cord_pct$Response == "Yes"],
+          temp_pct$Frequency[temp_pct$Response == "Yes"],
+          dang_pct$Frequency[dang_pct$Response == "Yes"],
+          cBF_pct$Frequency[cBF_pct$Response == "Yes"],
+          obsBF_pct$Frequency[obsBF_pct$Response == "Yes"],
+          w_pct$Frequency[w_pct$Response == "Yes"])
+pct <- c(cord_pct$Percent[cord_pct$Response == "Yes"],
+         temp_pct$Percent[temp_pct$Response == "Yes"],
+         dang_pct$Percent[dang_pct$Response == "Yes"],
+         cBF_pct$Percent[cBF_pct$Response == "Yes"],
+         obsBF_pct$Percent[obsBF_pct$Response == "Yes"],
+         w_pct$Percent[w_pct$Response == "Yes"])
+sep_signalfun <- c(
+  "Cord examined",
+  "Temperature measured",
+  "Counseling on danger signs",
+  "Counseling on breastfeeding",
+  "Observed Breastfeeding",
+  "Weighed"
+)
+sum_signalfun <- data.frame(
+  Variable = sep_signalfun,
+  Frequency = freq,
+  Percent = pct
+)
+signalfunPlot <- ggplot(sum_signalfun, 
+                        aes(x = reorder(Variable, Percent), 
+                            y = Percent, fill = Percent)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(high = "#003388", low = "#ff292f") +
+  coord_flip() +
+  ylim(0, 100) +  # Set y-axis maximum to 100%
+  labs(title = "               Percentage of Newborns Receiving Six Signal Functions of Postnatal Care",
+       x = NULL,
+       y = "Percentage (%)") +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 12),  # Increase x-axis label font size
+    axis.text.y = element_text(size = 12)
+  )
+ggsave("signalfunPlot.png", signalfunPlot, dpi = 600 )
+
 
 # Percentage with at least two signal functions performed during the
 # first 2 days after birth
