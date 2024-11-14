@@ -404,12 +404,12 @@ library(openxlsx)
 # storing all bivar analysis in one list
 crosstab_results <- list(xtab.m_age, xtab.bord_cat, xtab.b_HF, 
                          xtab.v106, xtab.v101, xtab.v102, 
-                         xtab.v190, xtab.b4, xtab.anc, xtab.cs, xtab.sba,
+                         xtab.v190, xtab.b4, xtab.anc, xtab.ancqua, xtab.cs, xtab.sba,
                          xtab.accHF, xtab.mediaexp, xtab.mobile, xtab.healthdecision)
 # Specify sheet names (modify as needed)
 sheet_names <- c("Sheet1", "Sheet2", "Sheet3", "Sheet4", "Sheet5",
                  "Sheet6", "Sheet7", "Sheet8", "Sheet9", "Sheet10", "Sheet11",
-                 "Sheet12", "Sheet13", "Sheet14", "Sheet15")
+                 "Sheet12", "Sheet13", "Sheet14", "Sheet15", "Sheet16")
 # Create a new Excel workbook
 wb <- createWorkbook()
 
@@ -418,7 +418,7 @@ for (i in 1:length(crosstab_results)) {
   addWorksheet(wb, sheetName = sheet_names[i])
   writeData(wb, sheet = i, x = crosstab_results[[i]])
 }
-excel_file_path <- "output_crosstabs1.xlsx"
+excel_file_path <- "output_crosstabs_Nov13.xlsx"
 
 saveWorkbook(wb, file = excel_file_path, overwrite = TRUE)
 
@@ -426,9 +426,10 @@ saveWorkbook(wb, file = excel_file_path, overwrite = TRUE)
 # Create a new Excel workbook
 wb <- createWorkbook()
 # Listing all Xs in one object
-x_vars <- c("m_age_cat", "bord_cat", "b_HF", "v106", "v101", 
-            "v102","v190", "b4", "anc", "m17", "sba", "accHF",
-            "media_exp", "v169a", "healthdecision")
+x_vars <- c("m_age_cat", "bord_cat", "b_HF", "v106", 
+            "v101",  "v102","v190", "b4", "anc", "m17",
+            "sba", "accHF",  "media_exp", "v169a", 
+            "healthdecision", "ancqua")
 
 model_list <- list()
 
@@ -446,10 +447,12 @@ for (var in x_vars) {
   writeData(wb, sheet = var, x = odds_ratios, startCol = "B", startRow = 10)
 }
 
-saveWorkbook(wb, file = "BivarLogRegA.xlsx", overwrite = TRUE)
+saveWorkbook(wb, file = "BivarLogRegNov13.xlsx", overwrite = TRUE)
 
-adj.model <- glm(signalfunc ~ m_age_cat + bord_cat + b_HF + v106 + v101 +
-                   v102 + v190 + b4 + anc + m17 + sba, data = pkdhs, 
+adj.model <- glm(signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+ 
+                 v101+ v102+ v190 + b4 + anc + m17+
+                 sba+ accHF + media_exp+ v169a+
+                 healthdecision+ ancqua, data = pkdhs, 
                  family = binomial)
 summary(adj.model)
 adj.ORs <- exp(cbind(OR = coef(adj.model), confint(adj.model)))
@@ -457,13 +460,11 @@ wb <- createWorkbook()
 addWorksheet(wb, sheetName = "adjModel")
 writeData(wb, sheet = "adjModel", x = adj.model)
 writeData(wb, sheet = "adjModel", x = adj.ORs, startCol = "H", rowNames = TRUE)
-saveWorkbook(wb, file = "AdjLogReg_results3ANYmedia.xlsx", overwrite = TRUE)
+saveWorkbook(wb, file = "AdjLogReg_results14Nov.xlsx", overwrite = TRUE)
 
 ## Plotting Adj ORs as a forest plot
 library(MASS)
-or_CI <- round(exp(cbind(coef(adj.ORs),
-                         confint(adj.ORs))), digits = 3) %>%
-  as.data.frame()
+
 or_CI <- adj.ORs %>%
   as.data.frame() %>%
   mutate(variable = rownames(adj.ORs))
@@ -477,67 +478,78 @@ or_CI <- or_CI[, col_order]
 or_CI$variable <- recode_factor(or_CI$variable,
                                 "m_age_cat1" = "Mother's Age 20-34",
                                 "m_age_cat2" = "Mother's Age 35-49",
-                                "bord_cat2" = "Birth Order 2-3",
-                                "bord_cat3" = "Birth Order 4-5",
-                                "bord_cat4" = "Birth Order 6+",
                                 "v106primary" = "Mother's Education: Primary",
                                 "v106secondary" = "Mother's Education: Secondary",
                                 "v106higher" = "Mother's Education: Higher",
-                                "b4female" = "Sex of Child: Female",
                                 "v102rural" = "Place of Residence: Rural",
                                 "v101sindh" = "Sindh",
                                 "v101kpk" = "KPK",
                                 "v101balochistan" = "Balochistan",
                                 "v101ict" = "ICT",
                                 "v101fata" = "FATA",
-                                "sba" = "SBA",
                                 "v190poorer" = "WI: Poorer",
                                 "v190middle" = "WI: Middle",
                                 "v190richer" = "WI: Richer",
                                 "v190richest" = "WI: Richest",
+                                "media_exp" = "Media Exposure: Yes",
+                                "v169ayes" = "Owns a Mobile Phone",
+                                "accHF" = "Access to HF: Yes",
+                                "healthdecision" = "Decision-making: Health",
+                                "anc1" = "ANC Visit: 1-3",
+                                "anc2" = "ANC Visit: 4+",
+                                "ancqua" = "ANC Quality: Good",
+                                "sba" = "SBA",
                                 "b_HF" = "Institutional Delivery",
-                                "anc1" = "ANC visit: 1-3",
-                                "anc2" = "ANC visit: 4+",
-                                "m17yes" = "CS Performed")
+                                "m17yes" = "CS Performed",
+                                "b4female" = "Sex of Child: Female",
+                                "bord_cat2" = "Birth Order 2-3",
+                                "bord_cat3" = "Birth Order 4-5",
+                                "bord_cat4" = "Birth Order 6+")
 
 
 ## Plotting AORs with 95%CI as a forestplot
 custom_order <- c("Mother's Age 20-34",
                   "Mother's Age 35-49",
-                  "Birth Order 2-3",
-                  "Birth Order 4-5",
-                  "Birth Order 6+",
                   "Mother's Education: Primary",
                   "Mother's Education: Secondary",
                   "Mother's Education: Higher",
-                  "Sex of Child: Female",
                   "Place of Residence: Rural",
                   "Sindh",
                   "KPK",
                   "Balochistan",
                   "ICT",
                   "FATA",
-                  "SBA",
                   "WI: Poorer",
                   "WI: Middle",
                   "WI: Richer",
                   "WI: Richest",
+                  "Media Exposure: Yes",
+                  "Owns a Mobile Phone",
+                  "Access to HF: Yes",
+                  "Decision-making: Health",
+                  "ANC Visit: 1-3",
+                  "ANC Visit: 4+",
+                  "ANC Quality: Good",
+                  "SBA",
                   "Institutional Delivery",
-                  "ANC visit: 1-3",
-                  "ANC visit: 4+",
-                  "CS Performed")
+                  "CS Performed",
+                  "Sex of Child: Female",
+                  "Birth Order 2-3",
+                  "Birth Order 4-5",
+                  "Birth Order 6+")
 custom_colors <- (rev(c(
   "#FF4500", "#FF4500", "#1E90FF", "#1E90FF", "#1E90FF", "#32CD32", "#32CD32",
   "#32CD32", "#FF1493", "#768200", "#A52A2A", "#A52A2A", "#A52A2A", "#A52A2A",
   "#A52A2A", "#5F9EA0", "#FFD700", "#FFD700", "#FFD700", "#FFD700", "#dd9977",
-  "#889900", "#889900", "#8A2BE2")))
+  "#889900", "#889900", "#8A2BE2","#FF4500", "#FF4500", "#1E90FF", "#1E90FF",
+  "#bf4599")))
 
 plot_logit_model <- or_CI[-1,] %>%
   mutate(variable = factor(variable, levels = rev(custom_order))) %>%
   ggplot(aes(x = variable, y = AOR, color = variable)) +
   geom_point(shape = 16, size = 4, position = position_dodge(width = 1)) +
   geom_errorbar(aes(ymin = Lower_bound, ymax = Upper_bound),
-                width = 0.2, size = 0.7, position = position_dodge(width = 1)) +
+                width = 0.2, linewidth = 0.7, position = position_dodge(width = 1)) +
   scale_color_manual(values = custom_colors) + # Custom colors for each variable
   xlab(NULL) +
   ylab("Adjusted Odds Ratios with 95% CI") +
@@ -585,9 +597,10 @@ ggsave("InteractionPlot1.png", EMPlot, dpi = 600 )
 
 ## Not included in the current analysis
 ### stepwise regression
-fullMod <- glm(signalfunc ~ m_age_cat + bord_cat + b_HF + v106 + v101 + 
-               v102 + v190 + b4 + anc + m17 + sba + accHF + media_exp +
-               v169a, data = pkdhs, family = binomial)
+fullMod <- glm(signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+ 
+                 v101+ v102+ v190 + b4 + anc + m17+
+                 sba+ accHF + media_exp+ v169a+
+                 healthdecision+ ancqua, data = pkdhs, family = binomial)
 
 nullMod <- glm(signalfunc ~ 1, data = pkdhs, family = binomial)
 summary(nullMod)
@@ -597,6 +610,8 @@ backMod <- step(fullMod, direction = "backward")
 
 
 library(olsrr)
-pncNBmod <- lm(signalfunc ~ v169a + accHF + media_exp + v102 + b_HF + 
-                 sba + v190 + anc + anc + m17 + v101, data = pkdhs)
+pncNBmod <- lm(signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+ 
+                 v101+ v102+ v190 + b4 + anc + m17+
+                 sba+ accHF + media_exp+ v169a+
+                 healthdecision+ ancqua, data = pkdhs)
 ols_step_forward_p(pncNBmod, 0.2, hierarchical = T)
