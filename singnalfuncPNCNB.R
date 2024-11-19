@@ -4,6 +4,8 @@ library(labelled)
 library(pollster)
 library(survey)
 library(openxlsx)
+library(ggplot2)
+library(olsrr)
 pkdhs <- read.dta("//Users//sulailfatima//Desktop//GoogleDrive//MGWR_DHS//PKKR71FL.DTA")
 # creating the sampling weight variable. 
 pkdhs$wt <- pkdhs$v005/1000000 
@@ -76,6 +78,22 @@ pkdhs <- pkdhs %>%
   set_variable_labels(weighed = "Weighed")
 w_pct <- topline(pkdhs, variable = weighed, weight = wt)
 
+
+
+# Percentage with at least two signal functions performed during the
+# first 2 days after birth
+
+pkdhs <- pkdhs %>%
+  rowwise() %>%
+  mutate(yes_count = sum(cord, temp, dang, c_bf, obs_bf, weighed)) %>%
+  mutate(
+    signalfunc = case_when(
+      yes_count >= 2 ~ 1,
+      TRUE ~ 0)) %>%
+  set_value_labels(signalfunc = c("At least 2 SFs" = 1, "Less than 2 SFs" = 0)) %>%
+  set_variable_labels(signalfunc = "Signal functions for NB-PNC")
+sf_pct <- topline(pkdhs, variable = signalfunc, weight = wt)
+## Creating bar graph for 6 signal functions and at least 2 function performed
 sep_signalfun <- c("cord_pct", "temp_pct", "dang_pct", "cBF_pct",
                    "obsBF_pct", "w_pct")
 freq <- c(cord_pct$Frequency[cord_pct$Response == "Yes"],
@@ -95,7 +113,7 @@ sep_signalfun <- c(
   "Temperature measured",
   "Counseling on danger signs",
   "Counseling on breastfeeding",
-  "Observed Breastfeeding",
+  "Observed breastfeeding",
   "Weighed"
 )
 sum_signalfun <- data.frame(
@@ -103,39 +121,56 @@ sum_signalfun <- data.frame(
   Frequency = freq,
   Percent = pct
 )
-signalfunPlot <- ggplot(sum_signalfun, 
-                        aes(x = reorder(Variable, Percent), 
-                            y = Percent, fill = Percent)) + 
+# Calculate the percentage of births with "At least 2 SFs"
+percent_at_least_two <- sf_pct %>%
+  filter(Response == "At least 2 SFs") %>%
+  summarize(percent = (Frequency / sum(sf_pct$Frequency)) * 100) %>%
+  pull(percent)
+
+# Print the result to verify
+percent_at_least_two
+
+df_signalfun <- data.frame(
+  signal_function = c("Cord examined", "At least two signal functions", "Temperature measured", 
+                      "Counseling on breastfeeding", "Counseling on danger signs", 
+                      "Observed breastfeeding", "Weighed"),
+  percentage = c(64.1, 57.8, 46.1, 45.2, 26.9, 25.8, 18.9)
+)
+
+df_signalfun <- df_signalfun %>%
+  mutate(signal_function = factor(signal_function, 
+                                  levels = c("At least two signal functions",
+                                             "Weighed", "Observed breastfeeding",
+                                             "Counseling on danger signs",
+                                             "Counseling on breastfeeding", 
+                                             "Temperature measured",
+                                             "Cord examined")))
+
+
+
+signalfunPlot <- ggplot(df_signalfun, 
+                        aes(x = signal_function,
+                            y = percentage, 
+                            fill = percentage)) + 
   geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")),  # Add percentage labels
+            hjust = -0.2,   # Position labels slightly to the right of bars
+            size = 5,
+            fontface = "bold.italic") +
   scale_fill_gradient(high = "#003388", low = "#ff292f") +
   coord_flip() +
   ylim(0, 100) +  # Set y-axis maximum to 100%
-  labs(title = "               Percentage of Newborns Receiving Six Signal Functions of Postnatal Care",
+  labs(title = "Percentage of Newborns Receiving Six Signal Functions of Postnatal Care",
        x = NULL,
        y = "Percentage (%)") +
   theme_minimal() +
   theme(legend.position = "none") +
   theme(
-    legend.position = "none",
-    axis.text.x = element_text(size = 12),  # Increase x-axis label font size
-    axis.text.y = element_text(size = 12)
+    legend.position = "none", title = element_text(face = "bold", size = 20),
+    axis.text.x = element_text(size = 16),  # Increase x-axis label font size
+    axis.text.y = element_text(size = 16)
   )
 ggsave("signalfunPlot.png", signalfunPlot, dpi = 600 )
-
-
-# Percentage with at least two signal functions performed during the
-# first 2 days after birth
-
-pkdhs <- pkdhs %>%
-  rowwise() %>%
-  mutate(yes_count = sum(cord, temp, dang, c_bf, obs_bf, weighed)) %>%
-  mutate(
-    signalfunc = case_when(
-      yes_count >= 2 ~ 1,
-      TRUE ~ 0)) %>%
-  set_value_labels(signalfunc = c("At least 2 SFs" = 1, "Less than 2 SFs" = 0)) %>%
-  set_variable_labels(signalfunc = "Signal functions for NB-PNC")
-sf_pct <- topline(pkdhs, variable = signalfunc, weight = wt)
 
 # Not included in the current analysis
 # Media & Internet use
@@ -602,6 +637,11 @@ fullMod <- glm(signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+
                  sba+ accHF + media_exp+ v169a+
                  healthdecision+ ancqua, data = pkdhs, family = binomial)
 
+#  Apply stepwise regression using both directions (forward and backward)
+stepwise_model <- stepAIC(fullMod, direction = "both")
+# Display the summary of the final model
+summary(stepwise_model)
+
 nullMod <- glm(signalfunc ~ 1, data = pkdhs, family = binomial)
 summary(nullMod)
 
@@ -610,8 +650,73 @@ backMod <- step(fullMod, direction = "backward")
 
 
 library(olsrr)
-pncNBmod <- lm(signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+ 
+pncNBmod <- glm(signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+ 
                  v101+ v102+ v190 + b4 + anc + m17+
                  sba+ accHF + media_exp+ v169a+
                  healthdecision+ ancqua, data = pkdhs)
+
+pncNB.step_model <- ols_step_both_p(pncNBmod, p_remove = 0.2)
+aic_plot <- plot(pncNB.step_model)
+ggsave("aic_plot.png", aic_plot, dpi = 1200 )
+
+## only plotting dropping AICs
+# Load necessary libraries
+library(ggplot2)
+
+# Create the data frame
+stepwise_data <- data.frame(
+  Step = 0:11,
+  Variable = c("Base Model", "HF_birth", "csec", "h_decision", "ancqua", 
+               "region", "anc", "resid", "wealth", "sba", "accHF", "media_exp"),
+  AIC = c(5566.557, 5031.286, 4825.383, 4728.731, 4648.601, 4362.371, 
+          4319.873, 4307.091, 4281.959, 4275.854, 4273.231, 4271.377)
+)
+
+# Create the plot
+aic_drop <- ggplot(stepwise_data, 
+                   aes(x = Step, y = AIC)) + 
+  geom_line(color = "skyblue", size = 3) + 
+  geom_point(size = 5, color = "darkblue") + 
+  geom_text(aes(label = Variable), 
+            vjust = -1.15, 
+            hjust = -1.01, 
+            size = 4) + 
+  labs(title = "Drop in AIC Across Stepwise Regression Steps", 
+       x = "Step", 
+       y = "AIC") + 
+  theme_minimal(base_size = 12) + 
+  theme(plot.title = element_text(hjust = 0.5, 
+                                  face = "bold"), 
+        axis.title = element_text(face = "bold"))
+ggsave("aic_dropplot.png", aic_drop, dpi = 1200 )
+
+
+
 ols_step_forward_p(pncNBmod, 0.2, hierarchical = T)
+
+
+
+#########################
+#########################
+
+survey_design <- svydesign(
+  id = ~v001,          # Replace PSU with your PSU variable
+  strata = ~v022,   # Replace strata with your strata variable
+  weights = ~wt,  # Replace weight with your weight variable
+  data = pkdhs,   # Replace with your data frame
+  nest = TRUE         # If sampling is nested, set to TRUE
+)
+
+pncNBmod <- svyglm(
+  signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+ 
+    v101+ v102+ v190 + b4 + anc + m17+
+    sba+ accHF + media_exp+ v169a+
+    healthdecision+ ancqua,  # Specify your model formula
+  design = survey_design,
+  family=quasibinomial(link = "logit")              # Use binomial for logistic regression, or other families as needed
+)
+
+nbcare.stepw <- ols_step_both_p(
+  pncNBmod,
+  p_remove = 0.2)
+
