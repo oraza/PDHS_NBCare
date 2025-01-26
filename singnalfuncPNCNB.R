@@ -675,8 +675,8 @@ stepwise_data <- data.frame(
 # Create the plot
 aic_drop <- ggplot(stepwise_data, 
                    aes(x = Step, y = AIC)) + 
-  geom_line(color = "skyblue", size = 3) + 
-  geom_point(size = 5, color = "darkblue") + 
+  geom_line(color = "skyblue", size = 2) + 
+  geom_point(size = 4, color = "darkblue") + 
   geom_text(aes(label = Variable), 
             vjust = -1.15, 
             hjust = -1.01, 
