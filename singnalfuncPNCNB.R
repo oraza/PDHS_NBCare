@@ -144,7 +144,8 @@ df_signalfun <- df_signalfun %>%
                                              "Counseling on danger signs",
                                              "Counseling on breastfeeding", 
                                              "Temperature measured",
-                                             "Cord examined")))
+                                             "Cord examined"))) %>%
+  mutate(n = round((percentage / 100) * 3935)) 
 
 
 
@@ -153,24 +154,26 @@ signalfunPlot <- ggplot(df_signalfun,
                             y = percentage, 
                             fill = percentage)) + 
   geom_bar(stat = "identity") +
-  geom_text(aes(label = paste0(round(percentage, 1), "%")),  # Add percentage labels
+  geom_text(aes(label = paste0(round(percentage, 1), "% (n=", n, ")")), 
             hjust = -0.2,   # Position labels slightly to the right of bars
             size = 5,
             fontface = "bold.italic") +
   scale_fill_gradient(high = "#003388", low = "#ff292f") +
   coord_flip() +
   ylim(0, 100) +  # Set y-axis maximum to 100%
-  labs(title = "Percentage of Newborns Receiving Six Signal Functions of Postnatal Care",
-       x = NULL,
-       y = "Percentage (%)") +
+  labs(
+    y = "Percentage",
+    x = NULL  # Remove y-axis label
+  ) +
   theme_minimal() +
-  theme(legend.position = "none") +
   theme(
-    legend.position = "none", title = element_text(face = "bold", size = 20),
+    legend.position = "none", 
+    title = element_text(face = "bold", size = 16),
     axis.text.x = element_text(size = 16),  # Increase x-axis label font size
     axis.text.y = element_text(size = 16)
   )
-ggsave("signalfunPlot.png", signalfunPlot, dpi = 600 )
+
+ggsave("signalfunPlotPostRev.png", signalfunPlot, dpi = 600 )
 
 # Not included in the current analysis
 # Media & Internet use
@@ -356,23 +359,23 @@ pkdhs$anc <- as.factor(pkdhs$anc)
 pkdhs <- pkdhs %>%
   mutate(
     m42cbi = case_when(
-      m42c == "yes" ~ 1,
+      m42c == "yes" ~ 1, #Blood pressure measured
       TRUE ~ 0)) %>%
   mutate(
     m42dbi = case_when(
-      m42d == "yes" ~ 1,
+      m42d == "yes" ~ 1, #Urine sample taken
       TRUE ~ 0)) %>%
   mutate(
     m42ebi = case_when(
-      m42e == "yes" ~ 1,
+      m42e == "yes" ~ 1, #Blood sample taken
       TRUE ~ 0)) %>%
   mutate(
       m45bi = case_when(
-        m45 == "yes" ~ 1,
+        m45 == "yes" ~ 1, #Took iron tablets or syrup
         TRUE ~ 0)) %>%
   mutate(
     m60bi = case_when(
-      m60 == "yes" ~ 1,
+      m60 == "yes" ~ 1, #Took intestinal parasite drugs 
       TRUE ~ 0)) %>%
   rowwise() %>%
   mutate(
@@ -453,7 +456,7 @@ for (i in 1:length(crosstab_results)) {
   addWorksheet(wb, sheetName = sheet_names[i])
   writeData(wb, sheet = i, x = crosstab_results[[i]])
 }
-excel_file_path <- "output_crosstabs_Nov13.xlsx"
+excel_file_path <- "output_crosstabs_jan25.xlsx"
 
 saveWorkbook(wb, file = excel_file_path, overwrite = TRUE)
 
@@ -482,7 +485,7 @@ for (var in x_vars) {
   writeData(wb, sheet = var, x = odds_ratios, startCol = "B", startRow = 10)
 }
 
-saveWorkbook(wb, file = "BivarLogRegNov13.xlsx", overwrite = TRUE)
+saveWorkbook(wb, file = "BivarLogRegJan25.xlsx", overwrite = TRUE)
 
 adj.model <- glm(signalfunc ~ m_age_cat+ bord_cat+ b_HF+ v106+ 
                  v101+ v102+ v190 + b4 + anc + m17+
@@ -719,4 +722,50 @@ pncNBmod <- svyglm(
 nbcare.stepw <- ols_step_both_p(
   pncNBmod,
   p_remove = 0.2)
+
+### plot for GA
+install.packages("ggimage")
+library(ggplot2)
+library(ggimage)
+
+# Create a data frame with signal functions and their corresponding icons
+df_signalfun$icon <- c("/Users/sulailfatima/Desktop/GoogleDrive/PDHS_NBCare/icons/1cord.png",  # Replace with actual file paths
+                       "/Users/sulailfatima/Desktop/GoogleDrive/PDHS_NBCare/icons/7signalfunc.png",
+                       "/Users/sulailfatima/Desktop/GoogleDrive/PDHS_NBCare/icons/2temp.png",
+                       "/Users/sulailfatima/Desktop/GoogleDrive/PDHS_NBCare/icons/3bfcounseling.png",
+                       "/Users/sulailfatima/Desktop/GoogleDrive/PDHS_NBCare/icons/4dangersign.png",
+                       "/Users/sulailfatima/Desktop/GoogleDrive/PDHS_NBCare/icons/5breastfeeding.png",
+                       "/Users/sulailfatima/Desktop/GoogleDrive/PDHS_NBCare/icons/6weighed.png"
+                       )
+
+signalfunPlotGA <- ggplot(df_signalfun, 
+                        aes(x = signal_function,
+                            y = percentage, 
+                            fill = percentage)) + 
+  geom_bar(stat = "identity") +
+  geom_image(aes(y = -6, image = icon), size = 0.11) + # Add icons to x-axis
+  geom_text(aes(label = paste0(round(percentage, 1), "% (n=", n, ")")), 
+            hjust = -0.2,   # Position labels slightly to the right of bars
+            size = 5,
+            fontface = "bold.italic") +
+  scale_fill_gradient(high = "#003388", low = "#ff292f") +
+  coord_flip() +
+  ylim(-10, 100) +  # Set y-axis maximum to 100%
+  labs(
+    y = "Percentage",
+    x = NULL  # Remove y-axis label
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none", 
+    title = element_text(face = "bold", size = 16),
+    axis.text.x = element_blank(),  # Remove x-axis labels
+    axis.text.y = element_blank(),  # Remove y-axis text
+    panel.grid = element_blank(),   # Remove all grid lines
+    panel.background = element_blank(),  # Remove panel background
+    plot.background = element_blank()    # Remove plot background
+  )
+signalfunPlotGA
+
+ggsave("signalfunPlotGA.png", signalfunPlotGA, dpi = 600 )
 
